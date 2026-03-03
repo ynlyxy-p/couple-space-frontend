@@ -1,145 +1,112 @@
 <template>
   <div class="home-container">
-    <!-- 顶部导航 -->
-    <el-header>
+    <!-- 导航栏 -->
+    <el-header class="home-header">
       <div class="header-content">
-        <h1>情侣空间</h1>
-        <div class="user-info">
-          <el-avatar :src="userInfo.avatar" class="user-avatar"></el-avatar>
-          <span class="username">{{ userInfo.username }}</span>
-          <el-button type="text" @click="logout">退出登录</el-button>
-        </div>
+        <h2>情侣空间 💑</h2>
+        <el-button type="text" @click="logout">退出登录</el-button>
       </div>
     </el-header>
 
-    <el-container style="height: calc(100vh - 60px);">
-      <!-- 侧边栏 -->
-      <el-aside width="200px" style="background-color: #f5f5f5;">
-        <el-menu default-active="1">
-          <el-menu-item index="1">
-            <el-icon><House /></el-icon>
-            <span slot="title">我的空间</span>
-          </el-menu-item>
-          <el-menu-item index="2" @click="showInviteModal = true">
-            <el-icon><UserFilled /></el-icon>
-            <span slot="title">邀请情侣</span>
-          </el-menu-item>
-          <el-menu-item index="3" @click="getInvitations">
-            <el-icon><Message /></el-icon>
-            <span slot="title">邀请消息</span>
-            <el-badge :value="invitationCount" class="badge" v-if="invitationCount > 0"></el-badge>
-          </el-menu-item>
-        </el-menu>
-      </el-aside>
-
-      <!-- 主内容区 -->
-      <el-main>
-        <!-- 情侣信息 -->
-        <div class="couple-info" v-if="coupleInfo">
-          <el-card>
-            <div class="couple-header">
-              <el-avatar :src="userInfo.avatar" size="large"></el-avatar>
-              <div class="love-icon">❤️</div>
+    <!-- 主要内容 -->
+    <el-main class="home-main">
+      <el-row :gutter="20">
+        <!-- 左侧：情侣信息 -->
+        <el-col :span="6">
+          <el-card header="我的情侣" shadow="hover">
+            <div v-if="coupleInfo" class="couple-info">
               <el-avatar :src="coupleInfo.partner.avatar" size="large"></el-avatar>
+              <p class="partner-name">{{ coupleInfo.partner.username }}</p>
+              <el-button type="primary" size="small" @click="showInviteModal = true">
+                更换情侣
+              </el-button>
             </div>
-            <div class="couple-names">
-              <span>{{ userInfo.username }}</span>
-              <span> & {{ }} </span>
-              <span>{{ coupleInfo.partner.username }}</span>
-            </div>
-            <div class="couple-time">
-              在一起 {{ formatDate(coupleInfo.created_at) }}
-            </div>
-          </el-card>
-        </div>
-
-        <!-- 未建立情侣关系提示 -->
-        <div class="no-couple" v-else>
-          <el-card>
-            <div class="no-couple-content">
-              <el-icon size="48"><Heart /></el-icon>
-              <p>还没有情侣，快去邀请TA吧！</p>
-              <el-button type="primary" @click="showInviteModal = true">邀请情侣</el-button>
+            <div v-else class="no-couple">
+              <p>还没有情侣？</p>
+              <el-button type="primary" @click="showInviteModal = true">
+                邀请情侣
+              </el-button>
             </div>
           </el-card>
-        </div>
 
-        <!-- 发布动态 -->
-        <el-card class="publish-card" v-if="coupleInfo">
-          <el-form :model="momentForm" ref="momentFormRef">
-            <el-form-item>
-              <el-input
-                  v-model="momentForm.content"
-                  type="textarea"
-                  rows="3"
-                  placeholder="分享你们的甜蜜时光..."
-              ></el-input>
-            </el-form-item>
-            <el-form-item>
-              <el-upload
-                  action="#"
-                  :auto-upload="false"
-                  :on-change="handleImageChange"
-                  list-type="picture-card"
-              >
-                <el-icon><Plus /></el-icon>
-              </el-upload>
-            </el-form-item>
-            <el-form-item align="right">
-              <el-button type="primary" @click="publishMoment">发布</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
+          <!-- 待处理邀请 -->
+          <el-card header="待处理邀请" shadow="hover" style="margin-top: 20px;">
+            <div v-if="invitationList.length > 0">
+              <div v-for="invite in invitationList" :key="invite.invitation_id" class="invite-item">
+                <p>来自 {{ invite.inviter.username }} 的邀请</p>
+                <el-button type="primary" size="mini" @click="handleInvite(invite.invitation_id, 1)">
+                  接受
+                </el-button>
+                <el-button size="mini" @click="handleInvite(invite.invitation_id, 2)">
+                  拒绝
+                </el-button>
+              </div>
+            </div>
+            <div v-else>
+              <p>暂无待处理邀请</p>
+            </div>
+          </el-card>
+        </el-col>
 
-        <!-- 动态列表 -->
-        <div class="moment-list" v-if="coupleInfo">
-          <moment-item
-              v-for="moment in momentList"
-              :key="moment.moment_id"
-              :moment="moment"
-          ></moment-item>
-        </div>
-      </el-main>
-    </el-container>
+        <!-- 右侧：动态区域 -->
+        <el-col :span="18">
+          <!-- 发布动态 -->
+          <el-card shadow="hover" class="publish-card">
+            <el-form ref="momentFormRef" :model="momentForm">
+              <el-form-item>
+                <el-input
+                    v-model="momentForm.content"
+                    type="textarea"
+                    placeholder="分享你们的甜蜜瞬间..."
+                    :rows="3"
+                ></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="submitMoment">发布</el-button>
+              </el-form-item>
+            </el-form>
+          </el-card>
+
+          <!-- 动态列表 -->
+          <el-card header="甜蜜瞬间" shadow="hover" style="margin-top: 20px;">
+            <div v-if="momentList.length > 0" class="moment-list">
+              <div v-for="moment in momentList" :key="moment.moment_id" class="moment-item">
+                <div class="moment-header">
+                  <el-avatar :src="moment.publisher.avatar"></el-avatar>
+                  <span class="publisher-name">{{ moment.publisher.username }}</span>
+                  <span class="moment-time">{{ formatTime(moment.created_at) }}</span>
+                </div>
+                <div class="moment-content">{{ moment.content }}</div>
+                <div v-if="moment.images.length > 0" class="moment-images">
+                  <el-image
+                      v-for="img in moment.images"
+                      :key="img"
+                      :src="img"
+                      style="width: 100px; height: 100px; margin-right: 10px;"
+                      fit="cover"
+                  ></el-image>
+                </div>
+              </div>
+            </div>
+            <div v-else>
+              <p class="no-moment">暂无动态，发布第一条甜蜜瞬间吧～</p>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </el-main>
 
     <!-- 邀请情侣弹窗 -->
-    <invite-modal
-        v-model="showInviteModal"
-        @invite-success="getCoupleInfo"
-    ></invite-modal>
-
-    <!-- 邀请消息弹窗 -->
-    <el-dialog
-        title="情侣邀请"
-        v-model="showInvitationModal"
-        width="400px"
-    >
-      <el-table :data="invitationList" border>
-        <el-table-column prop="inviter.username" label="邀请人"></el-table-column>
-        <el-table-column prop="created_at" label="邀请时间">
-          <template #default="scope">
-            {{ formatDate(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作">
-          <template #default="scope">
-            <el-button
-                type="primary"
-                size="small"
-                @click="handleInvitation(scope.row.invitation_id, 1)"
-            >
-              接受
-            </el-button>
-            <el-button
-                type="danger"
-                size="small"
-                @click="handleInvitation(scope.row.invitation_id, 2)"
-            >
-              拒绝
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <el-dialog title="邀请情侣" v-model="showInviteModal" width="400px">
+      <el-form ref="inviteFormRef" :model="inviteForm" :rules="inviteRules">
+        <el-form-item label="对方用户名" prop="invitee_username">
+          <el-input v-model="inviteForm.invitee_username" placeholder="输入对方的用户名"></el-input>
+        </el-form-item>
+      </el-form>
+      <template v-slot:footer>
+        <el-button @click="showInviteModal = false">取消</el-button>
+        <el-button type="primary" @click="sendInvite">发送邀请</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -148,228 +115,199 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { House, UserFilled, Message, Heart, Plus } from '@element-plus/icons-vue'
-import { getUserInfo } from '@/api/user'
-import { getCoupleInfo, getInvitationList, handleInvitation } from '@/api/couple'
-import { getMomentList, publishMoment } from '@/api/moment'
-import InviteModal from '@/components/InviteModal.vue'
-import MomentItem from '@/components/MomentItem.vue'
+import { getUserInfo } from '../api/user'
+import { getCoupleInfo, inviteCouple, getInvitationList, handleInvitation } from '../api/couple'
+import { getMomentList, publishMoment } from '../api/moment'
 
 const router = useRouter()
-// 用户信息
-const userInfo = ref(JSON.parse(localStorage.getItem('userInfo')) || {})
+const showInviteModal = ref(false)
+
 // 情侣信息
 const coupleInfo = ref(null)
-// 邀请弹窗
-const showInviteModal = ref(false)
-// 邀请消息弹窗
-const showInvitationModal = ref(false)
 // 邀请列表
 const invitationList = ref([])
-// 邀请数量
-const invitationCount = ref(0)
-// 动态表单
-const momentFormRef = ref(null)
-const momentForm = ref({
-  content: '',
-  images: []
-})
 // 动态列表
 const momentList = ref([])
 
-// 格式化日期
-const formatDate = (dateStr) => {
-  const date = new Date(dateStr)
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-}
+// 邀请表单
+const inviteFormRef = ref(null)
+const inviteForm = ref({
+  invitee_username: ''
+})
+const inviteRules = ref({
+  invitee_username: [{ required: true, message: '请输入对方用户名', trigger: 'blur' }]
+})
 
-// 退出登录
-const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('userInfo')
-  ElMessage.success('退出成功')
-  router.push('/login')
-}
+// 动态表单
+const momentFormRef = ref(null)
+const momentForm = ref({
+  content: ''
+})
 
-// 获取情侣信息
-const getCoupleInfoHandler = async () => {
+// 初始化数据
+onMounted(() => {
+  loadCoupleInfo()
+  loadInvitations()
+  loadMoments()
+})
+
+// 加载情侣信息
+const loadCoupleInfo = async () => {
   try {
     const res = await getCoupleInfo()
     coupleInfo.value = res.data
-    // 如果有情侣关系，获取动态列表
-    if (res.data) {
-      getMomentListHandler()
-    }
-  } catch (error) {
-    console.error('获取情侣信息失败:', error)
+  } catch (err) {
+    ElMessage.warning('未查询到情侣关系')
   }
 }
 
-// 获取邀请列表
-const getInvitations = async () => {
+// 加载邀请列表
+const loadInvitations = async () => {
   try {
     const res = await getInvitationList()
     invitationList.value = res.data
-    invitationCount.value = res.data.length
-    showInvitationModal.value = true
-  } catch (error) {
-    console.error('获取邀请列表失败:', error)
+  } catch (err) {
+    console.log('加载邀请列表失败：', err)
+  }
+}
+
+// 加载动态列表
+const loadMoments = async () => {
+  try {
+    const res = await getMomentList()
+    momentList.value = res.data
+  } catch (err) {
+    console.log('加载动态列表失败：', err)
+  }
+}
+
+// 发送邀请
+const sendInvite = async () => {
+  try {
+    await inviteFormRef.value.validate()
+    await inviteCouple(inviteForm.value)
+    ElMessage.success('邀请已发送！')
+    showInviteModal.value = false
+    loadInvitations()
+  } catch (err) {
+    ElMessage.error(err || '发送邀请失败')
   }
 }
 
 // 处理邀请
-const handleInvitationHandler = async (invitationId, action) => {
+const handleInvite = async (invitationId, action) => {
   try {
     await handleInvitation({
       invitation_id: invitationId,
-      action
+      action: action
     })
-    ElMessage.success(action === 1 ? '接受邀请成功' : '拒绝邀请成功')
-    showInvitationModal.value = false
-    // 刷新情侣信息
-    getCoupleInfoHandler()
-    // 刷新邀请列表
-    getInvitations()
-  } catch (error) {
-    console.error('处理邀请失败:', error)
+    ElMessage.success(action === 1 ? '接受邀请成功！' : '拒绝邀请成功')
+    loadInvitations()
+    loadCoupleInfo()
+  } catch (err) {
+    ElMessage.error(err || '处理邀请失败')
   }
 }
 
-// 处理图片上传
-const handleImageChange = (file) => {
-  // 这里简化处理，实际项目需要上传到服务器
-  momentForm.value.images.push(file.url || file.name)
-}
-
-// 发布动态
-const publishMomentHandler = async () => {
+// 发布动态（修改函数名，避免和导入的publishMoment冲突）
+const submitMoment = async () => {
   try {
+    if (!momentForm.value.content) {
+      ElMessage.warning('请输入内容')
+      return
+    }
     await publishMoment(momentForm.value)
-    ElMessage.success('发布成功')
-    // 清空表单
-    momentForm.value = {
-      content: '',
-      images: []
-    }
-    // 刷新动态列表
-    getMomentListHandler()
-  } catch (error) {
-    console.error('发布动态失败:', error)
+    ElMessage.success('发布成功！')
+    momentForm.value.content = ''
+    loadMoments()
+  } catch (err) {
+    ElMessage.error(err || '发布失败')
   }
 }
 
-// 获取动态列表
-const getMomentListHandler = async () => {
-  try {
-    const res = await getMomentList()
-    momentList.value = res.data
-  } catch (error) {
-    console.error('获取动态列表失败:', error)
-  }
+// 退出登录
+const logout = () => {
+  localStorage.removeItem('couple_token')
+  router.push('/login')
+  ElMessage.success('已退出登录')
 }
 
-// 初始化
-onMounted(async () => {
-  // 获取用户信息
-  try {
-    const res = await getUserInfo()
-    userInfo.value = {
-      userId: res.data.user_id,
-      username: res.data.username,
-      avatar: res.data.avatar
-    }
-    localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
-  } catch (error) {
-    console.error('获取用户信息失败:', error)
-  }
-
-  // 获取情侣信息
-  getCoupleInfoHandler()
-
-  // 获取未处理的邀请数量
-  try {
-    const res = await getInvitationList()
-    invitationCount.value = res.data.length
-  } catch (error) {
-    console.error('获取邀请数量失败:', error)
-  }
-})
+// 格式化时间
+const formatTime = (time) => {
+  return new Date(time).toLocaleString()
+}
 </script>
 
 <style scoped>
 .home-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  height: 100%;
 }
-
+.home-header {
+  background-color: #409eff;
+  color: white;
+  padding: 0 20px;
+}
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  height: 60px;
 }
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.home-main {
+  padding: 20px;
 }
-
-.user-avatar {
-  cursor: pointer;
-}
-
 .couple-info {
-  margin-bottom: 20px;
-}
-
-.couple-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 10px;
-}
-
-.love-icon {
-  font-size: 24px;
-}
-
-.couple-names {
   text-align: center;
-  font-size: 18px;
-  margin-bottom: 10px;
+  padding: 20px 0;
 }
-
-.couple-time {
-  text-align: center;
-  color: #999;
+.partner-name {
+  margin: 10px 0;
+  font-size: 16px;
+  font-weight: bold;
 }
-
 .no-couple {
-  margin-bottom: 20px;
+  text-align: center;
+  padding: 20px 0;
 }
-
-.no-couple-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 0;
+.invite-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
 }
-
 .publish-card {
   margin-bottom: 20px;
 }
-
 .moment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 10px 0;
 }
-
-.badge {
-  margin-top: -5px;
+.moment-item {
+  padding: 15px 0;
+  border-bottom: 1px solid #eee;
+}
+.moment-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.publisher-name {
+  margin: 0 10px;
+  font-weight: bold;
+}
+.moment-time {
+  color: #999;
+  font-size: 12px;
+  margin-left: auto;
+}
+.moment-content {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.moment-images {
+  display: flex;
+  flex-wrap: wrap;
+}
+.no-moment {
+  text-align: center;
+  padding: 20px 0;
+  color: #999;
 }
 </style>

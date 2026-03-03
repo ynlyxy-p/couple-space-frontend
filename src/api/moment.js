@@ -1,11 +1,11 @@
-import request from '@/utils/request'
+import request from './request'
 
 // 发布动态
 export function publishMoment(data) {
     return request({
         url: '/moment/publish',
         method: 'post',
-        data
+        data: data
     })
 }
 

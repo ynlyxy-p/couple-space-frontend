@@ -1,20 +1,20 @@
-import request from '@/utils/request'
+import request from './request'
 
 // 用户注册
-export function register(data) {
+export function userRegister(data) {
     return request({
         url: '/register',
         method: 'post',
-        data
+        data: data
     })
 }
 
 // 用户登录
-export function login(data) {
+export function userLogin(data) {
     return request({
         url: '/login',
         method: 'post',
-        data
+        data: data
     })
 }
 

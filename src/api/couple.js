@@ -1,20 +1,20 @@
-import request from '@/utils/request'
+import request from './request'
 
 // 邀请情侣
 export function inviteCouple(data) {
     return request({
         url: '/couple/invite',
         method: 'post',
-        data
+        data: data
     })
 }
 
-// 处理邀请
+// 处理邀请（接受/拒绝）
 export function handleInvitation(data) {
     return request({
         url: '/couple/handle-invitation',
         method: 'post',
-        data
+        data: data
     })
 }
 
@@ -26,7 +26,7 @@ export function getCoupleInfo() {
     })
 }
 
-// 获取邀请列表
+// 获取待处理邀请列表
 export function getInvitationList() {
     return request({
         url: '/couple/invitations',

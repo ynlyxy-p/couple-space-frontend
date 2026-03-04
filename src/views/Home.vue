@@ -67,17 +67,20 @@
             </el-form>
           </el-card>
 
-          <!-- 动态列表 -->
+          <!-- 动态列表（核心修复：字段名匹配 + 图片空值判断） -->
           <el-card header="甜蜜瞬间" shadow="hover" style="margin-top: 20px;">
             <div v-if="momentList.length > 0" class="moment-list">
               <div v-for="moment in momentList" :key="moment.moment_id" class="moment-item">
                 <div class="moment-header">
-                  <el-avatar :src="moment.publisher.avatar"></el-avatar>
-                  <span class="publisher-name">{{ moment.publisher.username }}</span>
+                  <!-- 修复：直接使用后端返回的avatar字段，而非嵌套的publisher.avatar -->
+                  <el-avatar :src="moment.avatar"></el-avatar>
+                  <!-- 修复：直接使用后端返回的username字段，而非嵌套的publisher.username -->
+                  <span class="publisher-name">{{ moment.username }}</span>
                   <span class="moment-time">{{ formatTime(moment.created_at) }}</span>
                 </div>
                 <div class="moment-content">{{ moment.content }}</div>
-                <div v-if="moment.images.length > 0" class="moment-images">
+                <!-- 修复：增加images空值判断，避免null导致的渲染错误 -->
+                <div v-if="moment.images && moment.images.length > 0" class="moment-images">
                   <el-image
                       v-for="img in moment.images"
                       :key="img"
@@ -171,11 +174,12 @@ const loadInvitations = async () => {
   }
 }
 
-// 加载动态列表
+// 加载动态列表（保留调试日志，方便排查）
 const loadMoments = async () => {
   try {
     const res = await getMomentList()
-    momentList.value = res.data
+    momentList.value = res.data || [] // 确保数组不为空
+    console.log('加载到的动态列表:', momentList.value) // 调试用，可保留
   } catch (err) {
     console.log('加载动态列表失败：', err)
   }
@@ -209,17 +213,20 @@ const handleInvite = async (invitationId, action) => {
   }
 }
 
-// 发布动态（修改函数名，避免和导入的publishMoment冲突）
+// 发布动态（已保留发布后刷新列表的逻辑）
 const submitMoment = async () => {
   try {
     if (!momentForm.value.content) {
       ElMessage.warning('请输入内容')
       return
     }
+    // 调用接口发布
     await publishMoment(momentForm.value)
     ElMessage.success('发布成功！')
+    // 清空输入框
     momentForm.value.content = ''
-    loadMoments()
+    // 关键：发布成功后重新加载动态列表
+    await loadMoments()
   } catch (err) {
     ElMessage.error(err || '发布失败')
   }
